@@ -1,10 +1,38 @@
+name: Docker image publication 
 
-name: hello-world
 on:
-  
+  workflow_dispatch:
+env:
+    REGISTRY: ghcr.io
+    IMAGE_NAME: ${{github.repository}}
+
 jobs:
-  my-job:
-    runs-on: ubuntu-latest
-    steps:
-      - name: my-step
-        run: echo "Hello World!"
+    buil-and-push-images:
+        runs-on: ubuntu-latest  
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - name: Checkout repositry
+              uses: actions/checkout@v4
+    
+            - name: Login to the container registery
+              uses: docker/checkout@v3
+              with:
+                registry: ${{env.REGISTRY}}
+                username: ${{github.actor}}
+                password: ${{secrets.GITHUB_TOKEN}}
+
+            - name: Extract metadata (tags,labels) for docker 
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                images: ${{env.REGISTRY}}/${{env.IMAGE_NAME}}
+                
+            - name: build-push-docker-images
+              uses: dockjer/build-push-action@v5
+              with:
+                context: ./MyProject
+                push: true
+                tags: ${{steps.meta.outputs.tags}}
+                labels: ${{steps.meta.outputs.labels}}
